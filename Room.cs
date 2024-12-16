@@ -18,6 +18,32 @@ public class Room : Node2D
         ,{ "shadow_realm", Colors.MediumPurple }
     };
 
+    public static readonly Dictionary<String, Vector2> COMPASS_DIRECTION = new Dictionary<String, Vector2>
+    {
+        { "north", new Vector2(0, -1) }
+        ,{ "north_east", new Vector2(1, -1) }
+        ,{ "east", new Vector2(1, 0) }
+        ,{ "south_east", new Vector2(1, 1) }
+        ,{ "south", new Vector2(0, 1) }
+        ,{ "south_west", new Vector2(-1, 1) }
+        ,{ "west", new Vector2(-1, 0) }
+        ,{ "north_west", new Vector2(-1, -1) }
+    };
+
+    public static readonly Dictionary<String, String> COMPASS_OPPOSITE = new Dictionary<String, String>
+    {
+        { "north", "south" }
+        ,{ "north_east", "south_west" }
+        ,{ "east", "west" }
+        ,{ "south_east", "north_west" }
+        ,{ "south", "north" }
+        ,{ "south_west", "north_east" }
+        ,{ "west", "east" }
+        ,{ "north_west", "south_east" }
+    };
+
+    public static readonly String[] COMPASS_INDEX = new String[]{ "north", "north_east", "east", "south_east", "south", "south_west", "west", "north_west" };
+
     public Vector2 Coordinates
     {
         get => _Coordinates;
@@ -43,6 +69,33 @@ public class Room : Node2D
             //RoomColor = ROOM_COLORS[ _Type ];
         }
     }
+
+    public int MaxConnections
+    {
+        get
+        {
+            if( _MaxConnections == 0 )
+                switch( Type )
+                {
+                    case "goal":
+                    case "shadow_realm":
+                        _MaxConnections = 1;
+                        break;
+                    default:
+                        _MaxConnections = Main.DNDRoll( 2, 4 );
+                        break;
+                }
+            return _MaxConnections;
+        }
+    }
+
+    public int RemainingConnectionSlots { get => MaxConnections - ConnectedRooms.Count; }
+
+    public Dictionary< String, Room > ConnectedRooms
+    {
+        get => _ConnectedRooms;
+    }
+
     public Color RoomColor
     {
         get => LabelBox.Modulate;
@@ -56,8 +109,11 @@ public class Room : Node2D
 
     private NinePatchRect LabelBox;
     private Label Label;
+
     private Vector2 _Coordinates;
     private String _Type = "none";
+    private int _MaxConnections = 0;
+    private Dictionary< String, Room > _ConnectedRooms = new Dictionary<String, Room>();
 
     public override void _Ready()
     {
