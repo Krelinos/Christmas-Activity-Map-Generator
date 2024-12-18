@@ -17,6 +17,7 @@ public class Main : Node2D
     private static readonly RandomNumberGenerator RNG = new RandomNumberGenerator();
 
     private LineEdit SeedInput;
+    private Label SeedHint;
     private SpinBox IndexInput;
     private Button GenerateButton;
     private Node ConnectorLayer;
@@ -25,6 +26,7 @@ public class Main : Node2D
     private PackedScene _Room;
     private PackedScene _Connector;
     private PackedScene _ConnectorOneWay;
+    private ulong SavedRNGState;
 
     // Rolls use a DND-styled randomizer. A Vector2 that has (3, 8) is a roll of 3d8.
     private readonly Vector2 NONE_ROLL = new Vector2( 2, 8 );
@@ -33,10 +35,13 @@ public class Main : Node2D
     private readonly Vector2 SHOP_ROLL = new Vector2( 2, 2 );
     private readonly Vector2 RANDOM_TELE_ROLL = new Vector2(1, 3);
     private const float CONNECTOR_ONE_WAY_RATE = 0.2f;
+    private const String SEED_EMPTY_WARN = "Seed cannot be empty!";
+    private const String SEED_CONFIRM = "Press enter after editing to seed to confirm.";
 
     public override void _Ready()
     {
         SeedInput = GetNode<LineEdit>("Toolbar/HBoxContainer/Seed");
+        SeedHint = SeedInput.GetNode<Label>("Hint");
         IndexInput = GetNode<SpinBox>("Toolbar/HBoxContainer/Index");
         GenerateButton = GetNode<Button>("Toolbar/HBoxContainer/Button");
 
@@ -48,8 +53,10 @@ public class Main : Node2D
         _ConnectorOneWay = GD.Load("res://Scenes/ConnectorOneWay.tscn") as PackedScene;
         
         RNG.Seed = Seed.Hash();
-        RNG.State = (ulong)IndexInput.Value;
+        SavedRNGState = RNG.State;
 
+        SeedInput.Connect( "text_changed", this, nameof(OnSeedInputChanged) );
+        SeedInput.Connect( "text_entered", this, nameof(OnSeedInputEntered) );
         GenerateButton.Connect( "pressed", this, nameof(OnGenerateButtonPressed) );
     }
 
@@ -90,7 +97,7 @@ public class Main : Node2D
 
     private void PopulateMap()
     {
-        RNG.State = (ulong)IndexInput.Value;
+        RNG.State = SavedRNGState + (ulong)IndexInput.Value;
         IndexInput.Value++;
 
         // Clear existing elements on the map, then setup for a new batch.
@@ -107,7 +114,6 @@ public class Main : Node2D
 */
         Vector2 randCoord;
 
-        // None, Good, and Bad rooms
         for( int i = 0; i < DNDRoll(NONE_ROLL); i++ )
         {
             randCoord = GetRandomOpenCoord();
@@ -241,7 +247,7 @@ public class Main : Node2D
                         
                         // We can assume that if this direction is empty, then the equal opposite
                         // direction of the otherRoom is also empty.
-                        ConnectRooms( room, otherRoom, direction, RNG.Randf() < CONNECTOR_ONE_WAY_RATE );
+                        ConnectRooms( room, otherRoom, direction, RNG.Randf() < CONNECTOR_ONE_WAY_RATE && room.Type != "goal" );
                     }
                 }
     }
@@ -249,5 +255,21 @@ public class Main : Node2D
     private void OnGenerateButtonPressed()
     {
         PopulateMap();
+    }
+
+    private void OnSeedInputChanged( String newText )
+    {
+        SeedHint.Text = Seed == "" ? SEED_EMPTY_WARN : SEED_CONFIRM;
+        SeedHint.Visible = true;
+    }
+
+    private void OnSeedInputEntered( String newText )
+    {
+        if ( Seed != "" )
+        {
+            RNG.Seed = Seed.Hash();
+            SavedRNGState = RNG.State;
+            SeedHint.Visible = false;
+        }
     }
 }

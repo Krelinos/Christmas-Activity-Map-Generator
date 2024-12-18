@@ -1,8 +1,6 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=2 format=2]
 
-[ext_resource path="res://Scenes/Room.tscn" type="PackedScene" id=1]
 [ext_resource path="res://Main.cs" type="Script" id=2]
-[ext_resource path="res://Scenes/ConnectorOneWay.tscn" type="PackedScene" id=3]
 
 [node name="Main" type="Node2D"]
 script = ExtResource( 2 )
@@ -32,9 +30,21 @@ margin_left = 241.0
 margin_right = 441.0
 margin_bottom = 29.0
 rect_min_size = Vector2( 200, 0 )
-text = "Bruh"
+text = "Test"
 align = 1
 clear_button_enabled = true
+
+[node name="Hint" type="Label" parent="Toolbar/HBoxContainer/Seed"]
+visible = false
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = -62.0
+margin_top = 1.0
+margin_right = 51.0
+margin_bottom = 20.0
+text = "Press enter after editing the seed to confirm."
+align = 1
 
 [node name="Control" type="Control" parent="Toolbar/HBoxContainer"]
 margin_left = 461.0
@@ -76,41 +86,4 @@ position = Vector2( 480, 500 )
 
 [node name="Connectors" type="Node2D" parent="Origin"]
 
-[node name="ConnectorOneWay" parent="Origin/Connectors" instance=ExtResource( 3 )]
-
 [node name="Rooms" type="Node2D" parent="Origin"]
-
-[node name="Room" parent="Origin/Rooms" instance=ExtResource( 1 )]
-
-[node name="Room10" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( -400, 0 )
-
-[node name="Room11" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 0, -400 )
-
-[node name="Room2" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 100, 0 )
-
-[node name="Room12" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 100, 100 )
-
-[node name="Room3" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 200, 0 )
-
-[node name="Room4" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 300, 0 )
-
-[node name="Room5" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 0, 100 )
-
-[node name="Room6" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 0, 200 )
-
-[node name="Room7" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 0, 300 )
-
-[node name="Room8" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 400, 0 )
-
-[node name="Room9" parent="Origin/Rooms" instance=ExtResource( 1 )]
-position = Vector2( 0, 400 )
