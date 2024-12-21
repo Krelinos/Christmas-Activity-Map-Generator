@@ -20,8 +20,11 @@ public class Main : Node2D
     private Label SeedHint;
     private SpinBox IndexInput;
     private Button GenerateButton;
+    private Button ControlsButton;
+    private Control ControlsHints;
     private Node ConnectorLayer;
     private Node RoomLayer;
+    private UserControls UserControls;
 
     private PackedScene _Room;
     private PackedScene _Connector;
@@ -40,13 +43,17 @@ public class Main : Node2D
 
     public override void _Ready()
     {
-        SeedInput = GetNode<LineEdit>("Toolbar/HBoxContainer/Seed");
+        var toolbarPath = "Toolbar/VBoxContainer/HBoxContainer/";
+        SeedInput = GetNode<LineEdit>(toolbarPath +"Seed");
         SeedHint = SeedInput.GetNode<Label>("Hint");
-        IndexInput = GetNode<SpinBox>("Toolbar/HBoxContainer/Index");
-        GenerateButton = GetNode<Button>("Toolbar/HBoxContainer/Button");
+        IndexInput = GetNode<SpinBox>(toolbarPath + "Index");
+        GenerateButton = GetNode<Button>(toolbarPath + "Button");
+        ControlsButton = GetNode<Button>(toolbarPath + "ControlHintsButton");
+        ControlsHints = GetNode<Control>("Toolbar/VBoxContainer/ControlHints");
 
         ConnectorLayer = GetNode("Origin/Connectors");
         RoomLayer = GetNode("Origin/Rooms");
+        UserControls = GetNode<UserControls>("UserControls");
 
         _Room = GD.Load("res://Scenes/Room.tscn") as PackedScene;
         _Connector = GD.Load("res://Scenes/Connector.tscn") as PackedScene;
@@ -58,6 +65,15 @@ public class Main : Node2D
         SeedInput.Connect( "text_changed", this, nameof(OnSeedInputChanged) );
         SeedInput.Connect( "text_entered", this, nameof(OnSeedInputEntered) );
         GenerateButton.Connect( "pressed", this, nameof(OnGenerateButtonPressed) );
+        ControlsButton.Connect( "pressed", this, nameof(OnControlsHintPressed) );
+
+        UserControls.Connect( nameof(UserControls.ContextMenu), this, nameof(OnContextMenuSignaled) );
+        UserControls.Connect( nameof(UserControls.SpawnRoom), this, nameof(OnSpawnRoomSignaled) );
+        UserControls.Connect( nameof(UserControls.SpawnToken), this, nameof(OnSpawnTokenSignaled) );
+        UserControls.Connect( nameof(UserControls.DeleteEntity), this, nameof(OnDeleteEntitySignaled) );
+        UserControls.Connect( nameof(UserControls.SaveToSlot), this, nameof(OnSaveToSlotSignaled) );
+        UserControls.Connect( nameof(UserControls.LoadFromSlot), this, nameof(OnLoadFromSlotSignaled) );
+        UserControls.Connect( nameof(UserControls.ToggleToolbar), this, nameof(OnToggleToolbarSignaled) );
     }
 
     public static int DNDRoll( Vector2 dice )
@@ -271,5 +287,46 @@ public class Main : Node2D
             SavedRNGState = RNG.State;
             SeedHint.Visible = false;
         }
+    }
+
+    private void OnControlsHintPressed()
+    {
+        ControlsHints.Visible = !ControlsHints.Visible;
+        ControlsButton.Text = ControlsHints.Visible ? "Hide Controls" : "Show Controls";
+    }
+
+    private void OnContextMenuSignaled( Vector2 position )
+    {
+        GD.Print("Context menu " + position);
+    }
+    
+    private void OnSpawnRoomSignaled( Vector2 position )
+    {
+        GD.Print("Spawn room " + position);
+    }
+    
+    private void OnSpawnTokenSignaled( Vector2 position )
+    {
+        GD.Print("Spawn token " + position);
+    }
+
+    private void OnDeleteEntitySignaled( )
+    {
+        GD.Print("Delete entity");
+    }
+
+    private void OnSaveToSlotSignaled( int slot )
+    {
+        GD.Print("Saved to slot " + slot);
+    }
+    
+    private void OnLoadFromSlotSignaled( int slot )
+    {
+        GD.Print("Loaded from slot " + slot);
+    }
+
+    private void OnToggleToolbarSignaled( )
+    {
+        GD.Print("Toolbar toggled");
     }
 }
