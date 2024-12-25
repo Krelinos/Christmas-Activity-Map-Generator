@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
+using System.Xml;
 
 public class Main : Node2D
 {
@@ -22,13 +23,20 @@ public class Main : Node2D
     private Button GenerateButton;
     private Button ControlsButton;
     private Control ControlsHints;
+    private Control Toolbar;
     private Node ConnectorLayer;
     private Node RoomLayer;
+    private Node TokenLayer;
     private UserControls UserControls;
+
+    private Area2D MouseCollision;
+    private PhysicsBody2D SelectedEntity;
+    private Node2D SelectedEntityMarker;
 
     private PackedScene _Room;
     private PackedScene _Connector;
     private PackedScene _ConnectorOneWay;
+    private PackedScene _Token;
     private ulong SavedRNGState;
 
     // Rolls use a DND-styled randomizer. A Vector2 that has (3, 8) is a roll of 3d8.
@@ -50,14 +58,20 @@ public class Main : Node2D
         GenerateButton = GetNode<Button>(toolbarPath + "Button");
         ControlsButton = GetNode<Button>(toolbarPath + "ControlHintsButton");
         ControlsHints = GetNode<Control>("Toolbar/VBoxContainer/ControlHints");
+        Toolbar = GetNode<Control>("Toolbar");
 
         ConnectorLayer = GetNode("Origin/Connectors");
         RoomLayer = GetNode("Origin/Rooms");
+        TokenLayer = GetNode("Origin/Tokens");
         UserControls = GetNode<UserControls>("UserControls");
+
+        MouseCollision = GetNode<Area2D>("MouseCollision");
+        SelectedEntityMarker = GetNode<Node2D>("SelectedEntityMarker");
 
         _Room = GD.Load("res://Scenes/Room.tscn") as PackedScene;
         _Connector = GD.Load("res://Scenes/Connector.tscn") as PackedScene;
         _ConnectorOneWay = GD.Load("res://Scenes/ConnectorOneWay.tscn") as PackedScene;
+        _Token = GD.Load("res://Scenes/Token.tscn") as PackedScene;
         
         RNG.Seed = Seed.Hash();
         SavedRNGState = RNG.State;
@@ -67,6 +81,11 @@ public class Main : Node2D
         GenerateButton.Connect( "pressed", this, nameof(OnGenerateButtonPressed) );
         ControlsButton.Connect( "pressed", this, nameof(OnControlsHintPressed) );
 
+        // I know I can just connect via the editor, but I prefer seeing the connections in code.
+        UserControls.Connect( nameof(UserControls.SelectEntity), this, nameof(OnSelectEntitySignaled) );
+        UserControls.Connect( nameof(UserControls.DragEntity), this, nameof(OnDragEntitySignaled) );
+        UserControls.Connect( nameof(UserControls.DragEntityStart), this, nameof(OnDragEntityStartSignaled) );
+        UserControls.Connect( nameof(UserControls.DragEntityStop), this, nameof(OnDragEntityStopSignaled) );
         UserControls.Connect( nameof(UserControls.ContextMenu), this, nameof(OnContextMenuSignaled) );
         UserControls.Connect( nameof(UserControls.SpawnRoom), this, nameof(OnSpawnRoomSignaled) );
         UserControls.Connect( nameof(UserControls.SpawnToken), this, nameof(OnSpawnTokenSignaled) );
@@ -74,6 +93,13 @@ public class Main : Node2D
         UserControls.Connect( nameof(UserControls.SaveToSlot), this, nameof(OnSaveToSlotSignaled) );
         UserControls.Connect( nameof(UserControls.LoadFromSlot), this, nameof(OnLoadFromSlotSignaled) );
         UserControls.Connect( nameof(UserControls.ToggleToolbar), this, nameof(OnToggleToolbarSignaled) );
+    }
+
+    public override void _PhysicsProcess(float delta)
+    {
+        MouseCollision.Position = GetGlobalMousePosition();
+        if ( SelectedEntity != null )
+            SelectedEntityMarker.Position = SelectedEntity.GlobalPosition;
     }
 
     public static int DNDRoll( Vector2 dice )
@@ -84,6 +110,17 @@ public class Main : Node2D
         return result;
     }
     public static int DNDRoll( int quantity, int die ) { return DNDRoll( new Vector2(quantity, die) ); }
+
+    private Vector2 ViewportToGrid( Vector2 position )
+    {
+        position -= GetViewport().Size/2 - new Vector2(50,50);
+        position /= 100;
+        position = new Vector2(
+            Math.Max( -4, Math.Min((float)Math.Floor(position.x), 4) )
+            ,Math.Max( -4, Math.Min((float)Math.Floor(position.y), 4) ) );
+
+        return position;
+    }
 
     private Vector2 GetRandomOpenCoord()
     {
@@ -295,19 +332,65 @@ public class Main : Node2D
         ControlsButton.Text = ControlsHints.Visible ? "Hide Controls" : "Show Controls";
     }
 
+    // USER CONTROLS CLASS RESPONSES
+
+    private void OnSelectEntitySignaled( Vector2 position )
+    {
+        GD.Print("Select entity");
+        var entities = MouseCollision.GetOverlappingBodies();
+        GD.Print( entities.Count );
+        if ( entities.Count > 0 )
+        {
+            var first = entities[0] as PhysicsBody2D;
+            GD.Print( first );
+            SelectedEntity = first;
+            SelectedEntityMarker.Visible = true;
+        }
+        else
+        {
+            SelectedEntity = null;
+            SelectedEntityMarker.Visible = false;
+        }
+    }
+
+    private void OnDragEntitySignaled( Vector2 position )
+    {
+        if ( SelectedEntity == null ) return;
+
+        SelectedEntity.GlobalPosition = position;
+    }
+
+    private void OnDragEntityStartSignaled( )
+    {
+        if ( SelectedEntity == null ) return;
+        
+        SelectedEntity.CollisionLayer = 0;
+        SelectedEntity.CollisionMask = 0;
+    }
+
+    private void OnDragEntityStopSignaled( )
+    {
+        if ( SelectedEntity == null ) return;
+
+        SelectedEntity.CollisionLayer = 1;
+        SelectedEntity.CollisionMask = 1;
+    }
+
     private void OnContextMenuSignaled( Vector2 position )
     {
-        GD.Print("Context menu " + position);
+        GD.Print("Context menu ");
     }
     
     private void OnSpawnRoomSignaled( Vector2 position )
     {
-        GD.Print("Spawn room " + position);
+        GD.Print("Spawn room " + ViewportToGrid(position));
     }
     
     private void OnSpawnTokenSignaled( Vector2 position )
     {
-        GD.Print("Spawn token " + position);
+        var token = _Token.Instance() as Node2D;
+        token.Position = position - GetNode<Node2D>("Origin").Position;
+        TokenLayer.AddChild( token );
     }
 
     private void OnDeleteEntitySignaled( )
@@ -327,6 +410,7 @@ public class Main : Node2D
 
     private void OnToggleToolbarSignaled( )
     {
-        GD.Print("Toolbar toggled");
+        // GD.Print("Toolbar toggled");
+        Toolbar.Visible = !Toolbar.Visible;
     }
 }
